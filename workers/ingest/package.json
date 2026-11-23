@@ -1,0 +1,1 @@
+{"name":"gallery-ingest","version":"0.0.1","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test process.test.mjs"},"dependencies":{"exifr":"7.1.3","sharp":"0.35.5"}}

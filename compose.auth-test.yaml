@@ -1,0 +1,49 @@
+# Isolated, disposable authentication tests. Never uses the development database.
+name: a6400-auth-test
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_DB: gallery
+      POSTGRES_USER: gallery
+      POSTGRES_PASSWORD: isolated-test-only
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U gallery -d gallery]
+      interval: 2s
+      retries: 20
+  mailpit:
+    image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+    ports: ["127.0.0.1:18026:8025"]
+  api:
+    image: a6400-stack-smoke-api:latest
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/gallery
+      DATABASE_USER: gallery
+      DATABASE_PASSWORD: isolated-test-only
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      OWNER_EMAIL: owner@example.com
+      REGISTRATION_OPEN: "true"
+      PUBLIC_URL: http://127.0.0.1:15174
+      STORAGE_ENDPOINT: http://storage:9090
+      STORAGE_BUCKET: gallery-smoke
+      INGEST_URL: http://ingest:8090
+      INGEST_TOKEN: local-development-ingest-token-change-me
+      GALLERY_PHOTOS_POLL_MS: 500
+      GALLERY_PHOTOS_CLEANUP_MS: 1000
+    depends_on:
+      postgres: { condition: service_healthy }
+      mailpit: { condition: service_started }
+  web:
+    image: a6400-stack-smoke-web:latest
+    depends_on: [api]
+    ports: ["127.0.0.1:15174:80"]
+  storage:
+    image: adobe/s3mock@sha256:ab01a6946750f451ca215a47e91030695b260e4003b8a5a6201d25029b8fca92
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: gallery-smoke
+  ingest:
+    image: a6400-stack-smoke-ingest:latest
+    environment:
+      INGEST_TOKEN: local-development-ingest-token-change-me

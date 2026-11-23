@@ -1,0 +1,26 @@
+# Disposable CI database, separate from development services and volumes.
+name: gallery-backend-ci
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_DB: gallery
+      POSTGRES_USER: gallery
+      POSTGRES_PASSWORD: ci-disposable-only
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U gallery -d gallery]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  api-test:
+    build:
+      context: ./api
+      target: build
+    command: [mvn, -B, -ntp, verify]
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/gallery
+      DATABASE_USER: gallery
+      DATABASE_PASSWORD: ci-disposable-only
+    depends_on:
+      postgres: {condition: service_healthy}

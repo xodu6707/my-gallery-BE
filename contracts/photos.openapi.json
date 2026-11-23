@@ -1,0 +1,834 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "A6400 Photo Management",
+    "version": "0.1.0",
+    "description": "JPEG only. See docs/PHOTOS.md for response fields, lifecycle and local-emulator limitations."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:15173"
+    }
+  ],
+  "paths": {
+    "/api/photo-settings": {
+      "get": {
+        "summary": "Upload limits",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Upload limits"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shoot-sessions": {
+      "get": {
+        "summary": "Own sessions; cursor pagination, 30 per page",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque nextCursor; session date/id descending, photo order/id ascending."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own sessions; cursor pagination, 30 per page"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a private shoot session",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Create a private shoot session"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShootInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shoot-sessions/{id}": {
+      "patch": {
+        "summary": "Update title, date, ready cover photo from this session",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Update title, date, ready cover photo from this session"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShootInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Tombstone session/photos, collect objects asynchronously",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tombstone session/photos, collect objects asynchronously"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shoot-sessions/{id}/photos": {
+      "get": {
+        "summary": "Own photos; cursor pagination, 60 per page",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque nextCursor; session date/id descending, photo order/id ascending."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own photos; cursor pagination, 60 per page"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shoot-sessions/{id}/uploads": {
+      "post": {
+        "summary": "Register upload; stable requestId is idempotent",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Register upload; stable requestId is idempotent"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shoot-sessions/{id}/photo-order": {
+      "put": {
+        "summary": "Replace complete order; reject duplicate/foreign/missing IDs",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Replace complete order; reject duplicate/foreign/missing IDs"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "photoIds"
+                ],
+                "properties": {
+                  "photoIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "uniqueItems": true,
+                    "maxItems": 10000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/photos/{id}": {
+      "get": {
+        "summary": "Own photo state and EXIF",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own photo state and EXIF",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Photo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete own photo and reject late results",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Delete own photo and reject late results"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/photos/{id}/content": {
+      "put": {
+        "summary": "Immutable JPEG upload through authenticated proxy",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Immutable JPEG upload through authenticated proxy"
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/photos/{id}/complete": {
+      "post": {
+        "summary": "Verify stored object and idempotently enqueue ingestion",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verify stored object and idempotently enqueue ingestion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Photo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/photos/{id}/retry": {
+      "post": {
+        "summary": "Requeue failed ingestion from immutable original",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Get token from /api/auth/csrf using the same cookie."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requeue failed ingestion from immutable original",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Photo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/photos/{id}/image/{variant}": {
+      "get": {
+        "summary": "Private no-store image; original as attachment",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "thumbnail",
+                "view",
+                "original"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private no-store image; original as attachment",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "400 invalid, 401 not logged in, 403 CSRF, 404 not owned/deleted, 409 conflict, 413 size, 503 storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ShootInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "shootDate"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "shootDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "coverPhotoId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "UploadInput": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "filename",
+          "size"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 52428800
+          }
+        }
+      },
+      "Photo": {
+        "type": "object",
+        "required": [
+          "id",
+          "sessionId",
+          "status",
+          "filename"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "UPLOADING",
+              "QUEUED",
+              "PROCESSING",
+              "READY",
+              "FAILED"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "thumbnailUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "viewUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "SESSION"
+      }
+    }
+  }
+}

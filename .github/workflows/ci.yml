@@ -1,0 +1,35 @@
+name: Backend CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Validate CI Compose
+        run: docker compose -f compose.ci.yaml config --quiet
+      - name: Run API tests with isolated PostgreSQL and Flyway
+        run: docker compose -f compose.ci.yaml up --build --abort-on-container-exit --exit-code-from api-test api-test
+      - name: Test JPEG processing and EXIF
+        run: |
+          docker build -t gallery-ingest-ci workers/ingest
+          docker run --rm gallery-ingest-ci npm test
+      - name: Build API runtime image
+        run: docker build -t gallery-api-ci api
+      - name: Diagnostic logs
+        if: failure()
+        run: docker compose -f compose.ci.yaml logs --no-color
+      - name: Remove isolated test services
+        if: always()
+        run: docker compose -f compose.ci.yaml down --volumes --remove-orphans

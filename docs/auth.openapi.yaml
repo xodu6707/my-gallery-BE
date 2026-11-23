@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: A6400 Authentication
+  version: 0.1.0
+  description: Same-origin server sessions. Every POST requires a CSRF header from GET /api/auth/csrf.
+servers:
+  - url: http://localhost:15173
+paths:
+  /api/auth/csrf:
+    get:
+      operationId: csrf
+      responses:
+        '200':
+          description: Obtain a session-bound CSRF token before a POST. Refetch after login.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [headerName, token]
+                properties:
+                  headerName: { type: string }
+                  token: { type: string }
+  /api/auth/signup/request:
+    post:
+      operationId: requestSignup
+      requestBody: { $ref: '#/components/requestBodies/Email' }
+      responses:
+        '202': { $ref: '#/components/responses/MailAccepted' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/auth/signup/complete:
+    post:
+      operationId: completeSignup
+      requestBody: { $ref: '#/components/requestBodies/Complete' }
+      responses:
+        '204': { description: Email verified and owner account created. Log in separately. }
+        default: { $ref: '#/components/responses/Error' }
+  /api/auth/login:
+    post:
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, minLength: 1, maxLength: 128, writeOnly: true }
+      responses:
+        '200':
+          description: Authenticated; sets or rotates HttpOnly SESSION cookie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/me:
+    get:
+      operationId: currentAccount
+      security: [{ session: [] }]
+      responses:
+        '200':
+          description: Current verified owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/auth/logout:
+    post:
+      operationId: logout
+      responses:
+        '204': { description: Session invalidated and cookie cleared. Requires CSRF. }
+        default: { $ref: '#/components/responses/Error' }
+  /api/auth/reset/request:
+    post:
+      operationId: requestPasswordReset
+      requestBody: { $ref: '#/components/requestBodies/Email' }
+      responses:
+        '202': { $ref: '#/components/responses/MailAccepted' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/auth/reset/complete:
+    post:
+      operationId: completePasswordReset
+      requestBody: { $ref: '#/components/requestBodies/Complete' }
+      responses:
+        '204': { description: Password changed and all existing account sessions revoked. }
+        default: { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: SESSION
+  schemas:
+    Account:
+      type: object
+      required: [id, email, role]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [OWNER] }
+    Message:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+  requestBodies:
+    Email:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [email]
+            properties:
+              email: { type: string, format: email, maxLength: 254 }
+    Complete:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [token, password]
+            properties:
+              token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$', writeOnly: true }
+              password: { type: string, minLength: 15, maxLength: 128, writeOnly: true }
+  responses:
+    MailAccepted:
+      description: Identical message whether the address is eligible or not. Does not guarantee delivery.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
+    Error:
+      description: 400 invalid input/token; 401 unauthenticated; 403 CSRF/closed signup; 429 rate limited; 503 mail unavailable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
