@@ -5,3 +5,6 @@ starter.zip
 .env
 .env.*
 !.env.example
+
+# Personal AI tool settings
+.claude/settings.local.json

@@ -57,3 +57,8 @@ docker run --rm --network a6400-stack-smoke_default -e DATABASE_URL=jdbc:postgre
 Sharp는 실행 시 메모리에서 JPEG를 생성하고 120×80 → 60×40 변환 및 EXIF 누락 처리를 확인한다. 이 프로세스는 실제 ingestion 큐를 소비하지 않는다.
 
 Python 스크립트는 `COMFYUI_URL`(기본 localhost:8188)의 `/system_stats`만 조회한다. 설치된 ComfyUI의 설정·큐·모델을 변경하지 않으며 실제 편집을 실행하지 않는다. 서비스 전용 ComfyUI 분리와 워크플로 검증은 후속 작업이다.
+
+
+## AI 작업 지침
+
+공유 규칙은 [AGENTS.md](AGENTS.md), Claude Code 진입점은 [CLAUDE.md](CLAUDE.md)입니다. DONGDONG의 구조를 현재 스택에 맞게 이식했습니다. 리뷰 반영은 `.agents/skills/apply-review/SKILL.md`, 문서 동기화는 `.agents/skills/update-docs/SKILL.md`를 사용합니다. `.claude/skills/`는 같은 원본을 읽는 래퍼입니다. 개인 설정은 공유하지 않습니다.
